@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Messenger</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <div class="header-avatar">💎</div>
+            <div class="header-info">
+                <h3>Киани</h3>
+                <span>онлайн</span>
+            </div>
+        </div>
+
+        <div class="messages" id="messages"></div>
+
+        <div class="input-area">
+            <div class="input-wrapper">
+                <input type="text" id="input" placeholder="Сообщение..." autocomplete="off" autofocus>
+            </div>
+            <button class="send-btn" id="sendBtn">➤</button>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket("ws://localhost:8000/ws");
+        const messages = document.getElementById("messages");
+        const input = document.getElementById("input");
+        const sendBtn = document.getElementById("sendBtn");
+
+        function getTime() {
+            const now = new Date();
+            return now.getHours().toString().padStart(2, '0') + ':' +
+                   now.getMinutes().toString().padStart(2, '0');
+        }
+
+        function addMessage(text, isUser) {
+            const row = document.createElement("div");
+            row.className = "message-row " + (isUser ? "user" : "server");
+
+            const bubble = document.createElement("div");
+            bubble.className = "bubble " + (isUser ? "user" : "server");
+
+            const timeSpan = document.createElement("span");
+            timeSpan.className = "time";
+            timeSpan.innerHTML = getTime() + (isUser ? ' <span class="checks">✓✓</span>' : '');
+
+            bubble.textContent = text;
+            bubble.appendChild(timeSpan);
+            row.appendChild(bubble);
+            messages.appendChild(row);
+
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        ws.onmessage = (event) => {
+            addMessage(event.data, false);
+        };
+
+        function send() {
+            const text = input.value.trim();
+            if (text) {
+                addMessage(text, true);
+                ws.send(text);
+                input.value = "";
+                input.focus();
+            }
+        }
+
+        sendBtn.onclick = send;
+
+        input.onkeypress = (e) => {
+            if (e.key === "Enter") send();
+        };
+
+        setTimeout(() => {
+            addMessage("Здравствуйте! Я помогу вам подключиться к сервису.\nДля подключения к сервису, укажите юридическое лицо, краткое описание экономической деятельности и налоговое резидентство юридического лица", false);
+        }, 500);
+    </script>
+</body>
+</html>
