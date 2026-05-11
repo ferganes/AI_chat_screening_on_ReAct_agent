@@ -60,7 +60,7 @@ models/
 
 # Файлы
 okved.py
-database.py
+db.py
 okved.json
 startup_init.py
 project_desc.txt

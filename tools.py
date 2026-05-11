@@ -1,6 +1,6 @@
 from langchain_core.tools import tool
 
-# Глобальная переменная для vectorstore (устанавливается при старте)
+# Глобальная переменная для vectorstore, устанавливается при запуске приложения
 _vectorstore = None
 
 
@@ -11,16 +11,20 @@ def set_vectorstore(vs):
 
 
 @tool
-def connect_to_service() -> str:
-    """Подключает пользователя к сервису. Используется ТОЛЬКО когда все 3 условия явно подтверждены."""
-
-    return ("Ваш бизнес соответствует требованиям. Подключаем вас к сервису. Ваша ссылка для подключения: "
-            "https://best-service-ever.com")
+def approve_user() -> str:
+    """Подключение пользователя к сервису. Используется ТОЛЬКО когда все 3 условия выполнены."""
+    return "Соответствие требованиям подключения. Пройдите по ссылке для завершения подключения к сервису."
 
 
 @tool
-def knowledge_base_search(query: str) -> str:
-    """Ищет релевантную информацию по ОКВЭД и описанию ОКВЭД во внутренней базе знаний RAG."""
+def reject_user() -> str:
+    """Отказ в подключение пользователя к сервису. Используется при невыполнении условий"""
+    return "К сожалению, вы несоответствуете требованиям подключения."
+
+
+@tool
+def search_description_in_okved(query: str) -> str:
+    """Проверяет наличие переданного пользователем описания бизнеса в описании кодов ОКВЭД"""
 
     global _vectorstore
 
@@ -40,8 +44,8 @@ def knowledge_base_search(query: str) -> str:
             return "РЕЗУЛЬТАТ: Не найдено."
 
     except Exception as e:
-        return f"РЕЗУЛЬТАТ: Ошибка поиска. {str(e)}. Попробуйте переформулировать описание бизнеса."
+        return f"РЕЗУЛЬТАТ: Ошибка поиска описания. {str(e)}. Попробуйте переформулировать описание бизнеса."
 
 
 def get_tools():
-    return [connect_to_service, knowledge_base_search]
+    return [approve_user, reject_user, search_description_in_okved]

@@ -36,9 +36,7 @@ async def lifespan(app: FastAPI):
     rag.start_rag(vectorstore)
 
     yield
-
     print("Shutting down...")
-
 
 # Создаем приложение
 app = FastAPI(lifespan=lifespan)
@@ -58,7 +56,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 async def create_chat_page(request: Request):
     """Главная страница чата"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.websocket("/ws")
