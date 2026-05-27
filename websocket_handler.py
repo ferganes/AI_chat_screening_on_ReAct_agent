@@ -1,28 +1,23 @@
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-from prompt import SYSTEM_PROMPT
+from langchain_core.messages import HumanMessage, AIMessage
 from config import MAX_CHAT_HISTORY
 
 
 async def agent_process_message(agent, user_message: str, chat_history: list):
-    """Обработка сообщения пользователя"""
-    print(f"[USER MESSAGE] Получено сообщение: {user_message}")
+    """Обработка сообщения пользователя через LangGraph ReAct."""
 
-    # Формируем контекст для llm
-    messages = [SystemMessage(content=SYSTEM_PROMPT)]
-    messages.extend(chat_history)
-    messages.append(HumanMessage(content=user_message))
+    response = await agent.ainvoke({
+        "messages": [*chat_history, HumanMessage(content=user_message)]
+    })
 
-    # Вызываем агента
-    response = await agent.ainvoke({"messages": messages})
-    answer = response["messages"][-1].content
+    last_message = response["messages"][-1]
+    answer = getattr(last_message, "content", str(last_message))
 
-    print(f"[LLM ANSWER] Ответ: {answer}")
+    chat_history.extend([
+        HumanMessage(content=user_message),
+        AIMessage(content=answer),
+    ])
 
-    # Обновляем историю
-    chat_history.append(HumanMessage(content=user_message))
-    chat_history.append(AIMessage(content=answer))
-
-    # Ограничиваем размер истории
+    # Ограничиваем размер истории (оставляем последние MAX_CHAT_HISTORY пар)
     if len(chat_history) > MAX_CHAT_HISTORY * 2:
         chat_history[:] = chat_history[-MAX_CHAT_HISTORY * 2:]
 

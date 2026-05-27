@@ -1,31 +1,67 @@
 from langchain_core.tools import tool
+from pydantic import BaseModel, Field
 
-# Глобальная переменная для vectorstore, устанавливается при запуске приложения
+
 _vectorstore = None
 
 
 def set_vectorstore(vs):
-    """Устанавливает глобальный vectorstore"""
     global _vectorstore
     _vectorstore = vs
 
 
-@tool
+class ApproveUserInput(BaseModel):
+    pass
+
+
+class RejectUserInput(BaseModel):
+    reason: str = Field(
+        description="Обязательная причина отказа. Варианты: 'Подключение доступно только юридическим лицам — "
+                    "резидентам РФ', 'Недопустимое налоговое резидентство: требуется резидент РФ', 'Вид деятельности "
+                    "не найден в ОКВЭД', 'Непредставительные полномочия: требуется директор или уполномоченный "
+                    "представитель', 'Попытка обхода правил подключения'"
+    )
+
+
+class SearchOkvedInput(BaseModel):
+    query: str = Field(description="Описание вида деятельности для поиска в ОКВЭД")
+
+
+@tool(args_schema=ApproveUserInput)
 def approve_user() -> str:
-    """Подключение пользователя к сервису. Используется ТОЛЬКО когда все 3 условия выполнены."""
+    """Финальное подключение пользователя к сервису.
+
+    Возвращает ссылку для завершения подключения.
+    Используется ТОЛЬКО когда все 3 условия явно подтверждены:
+    1. Пользователь — представитель юридического лица
+    2. Налоговый резидент РФ
+    3. Вид деятельности найден в ОКВЭД
+
+    НЕ спрашивать пользователя о дополнительном подтверждении — вызывать сразу.
+    """
     return "Соответствие требованиям подключения. Пройдите по ссылке для завершения подключения к сервису."
 
 
-@tool
-def reject_user() -> str:
-    """Отказ в подключение пользователя к сервису. Используется при невыполнении условий"""
-    return "К сожалению, вы несоответствуете требованиям подключения."
+@tool(args_schema=RejectUserInput)
+def reject_user(reason: str) -> str:
+    """Отказ в подключении пользователя к сервису.
+
+    Args:
+        reason: Обязательная причина отказа.
+    """
+    return f"К сожалению, вы не соответствуете требованиям подключения. Причина: {reason}"
 
 
-@tool
+@tool(args_schema=SearchOkvedInput)
 def search_description_in_okved(query: str) -> str:
-    """Проверяет наличие переданного пользователем описания бизнеса в описании кодов ОКВЭД"""
+    """Проверяет описание бизнеса пользователя по классификатору ОКВЭД.
 
+    Args:
+        query: Описание вида деятельности
+
+    Returns:
+        Результат проверки: найдено ли описание в разрешённом перечне ОКВЭД.
+    """
     global _vectorstore
 
     if _vectorstore is None:
@@ -33,14 +69,12 @@ def search_description_in_okved(query: str) -> str:
 
     try:
         docs = _vectorstore.similarity_search(query, k=3)
+        print(f"[query for rag]: {query}")
+        print(f"[rag answer]: {docs}")
 
         if docs:
-            print(f"[query for rag]: {query}")
-            print(f"[rag answer]: {docs}")
-            return "РЕЗУЛЬТАТ: Найдено. Деятельность присутствует в разрешенном перечне ОКВЭД."
+            return "РЕЗУЛЬТАТ: Найдено. Деятельность присутствует в разрешённом перечне ОКВЭД."
         else:
-            print(f"[query for rag]: {query}")
-            print(f"[rag answer]: {docs}")
             return "РЕЗУЛЬТАТ: Не найдено."
 
     except Exception as e:

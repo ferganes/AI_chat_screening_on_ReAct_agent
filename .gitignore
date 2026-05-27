@@ -32,11 +32,11 @@ data/
 logs/
 *.db
 *.sqlite
-*.sqlite3
+
 
 # Векторные базы (локальные файлы Chroma/FAISS)
 chroma_data/
-chroma_db/
+
 faiss_index/
 *.pickle
 *.parquet
@@ -58,9 +58,3 @@ models/
 *.onnx
 *.gguf
 
-# Файлы
-okved.py
-db.py
-okved.json
-startup_init.py
-project_desc.txt
